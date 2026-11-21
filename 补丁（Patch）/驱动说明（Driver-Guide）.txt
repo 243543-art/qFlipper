@@ -1,0 +1,50 @@
+刷机用的 USB 驱动怎么装（Windows）
+USB drivers for flashing (Windows)
+================================================
+
+一、普通安卓（ADB 模式）/ Normal Android (ADB)
+- 手机：设置 → 关于手机 → 连点版本号 7 次进开发者选项 → 打开「USB 调试」。
+  Phone: Settings -> About -> tap Build number 7 times -> Developer options -> enable USB debugging.
+- 电脑：装 ADB 驱动 = 本包 drivers\google-usb（双击「安装驱动（Install-Driver）.bat」，管理员运行）。
+  PC: install the ADB driver = drivers\google-usb in this bundle (run Install-Driver.bat as admin).
+- 认不出时：Win10/11 大多会自动装好；装不上就在设备管理器里右键那台未知设备 → 更新驱动 →
+  浏览 → 指向 drivers\google-usb 文件夹。
+  If not detected: Windows usually installs it automatically; otherwise Device Manager -> right-click
+  the unknown device -> Update driver -> Browse -> point at the drivers\google-usb folder.
+
+二、Fastboot 模式 / Fastboot mode
+- 手机：关机，按住 音量下 + 电源 进入 bootloader（部分机型是 音量上）。
+  Phone: power off, hold Volume-Down + Power to reach the bootloader (some models use Volume-Up).
+- 需要的驱动：Android Bootloader Interface，同一个 android_winusb.inf 里就有。
+  Needed driver: Android Bootloader Interface, included in the same android_winusb.inf.
+- 还是黄叹号：用 Zadig（https://zadig.akeo.ie）把这台设备换成 WinUSB 驱动即可。
+  Still a yellow mark: use Zadig (https://zadig.akeo.ie) to replace the driver with WinUSB.
+
+三、高通 9008（QDL）/ Qualcomm 9008 (QDL)
+- 手机：关机，按住 音量上 + 音量下（部分机型只有音量上）再插 USB。
+  Phone: power off, hold Volume-Up + Volume-Down (some only Volume-Up), then plug the cable.
+- 正确状态：设备管理器出现「端口(COM 和 LPT)」下的 Qualcomm HS-USB QDLoader 9008 (COMx)。
+  Correct state: Device Manager shows Qualcomm HS-USB QDLoader 9008 (COMx) under Ports.
+- 驱动来源：这个驱动是高通随 QFIL / QPST 工具包发的，授权不允许再分发，所以本补丁不附带。
+  下载途径：装一次高通的 QFIL（Qualcomm Flash Image Loader），驱动会一起装上；
+  或者用你机型刷机包里通常附带的 9008 驱动安装包。
+  Driver source: shipped by Qualcomm with QFIL / QPST. Its license forbids redistribution, so it is not
+  bundled here. Install QFIL once and the driver comes with it, or use the 9008 driver package that
+  usually ships with your model's firmware bundle.
+- 注意：不要把 9008 端口换成 WinUSB（本程序的 9008 走串口，换了就认不到）。
+  Do NOT replace the 9008 port with WinUSB — this app talks over the serial port.
+
+四、苹果 iOS / Apple iOS
+- 只识别、不刷机。电脑装 iTunes（微软商店版或官网版）即可让系统装好 Apple Mobile Device 驱动。
+  Detection only, no flashing. Install iTunes on the PC so Windows gets the Apple Mobile Device driver.
+- 进 DFU：关机后按住 音量下 + 电源 约 5 秒（iPhone 8 及以后是 音量上→音量下→长按电源）。
+  Enter DFU: with the phone off, hold Volume-Down + Power for ~5 s (for iPhone 8 and later:
+  Volume-Up, then Volume-Down, then hold Power).
+
+五、常见问题 / FAQ
+- 装了驱动还是不认：拔掉再插、换 USB 口（别用扩展坞）、换数据线（有些线只供电）。
+  Still not detected: replug, use another USB port (avoid hubs), try another cable (some are power-only).
+- 设备管理器里两个同名设备：手机复合接口会同时给出 ADB 和 MTP 两个节点，属正常。
+  Two devices with similar names: composite interfaces expose both ADB and MTP nodes; that is normal.
+- 驱动装错了想恢复：设备管理器 → 右键设备 → 卸载设备 → 勾选「删除驱动程序」→ 拔插重装。
+  To undo a wrong driver: Device Manager -> Uninstall device -> check "Delete the driver software" -> replug.

@@ -1,0 +1,126 @@
+qFlipper · Android Flasher Edition  User Guide (English)
+=======================================================
+
+Short version: every Flipper flashing feature of the official qFlipper is intact,
+plus a new "Android" tab that detects phones, flashes Fastboot images and burns
+Qualcomm 9008 firmware, with a one-click Chinese/English UI switch.
+
+
+1. What is inside this folder
+-------------------------------------------------------
+- qFlipper.exe        main program (double-click to start)
+- 使用说明（中文）.txt / 使用说明（English）.txt   this guide and its Chinese twin
+- 补丁（Patch）       offline patch folder: language switch, USB drivers, driver guide
+- other dll / plugins / qml   runtime files — keep them together, never copy only the exe
+
+The installer creates the same layout and adds a qFlipper shortcut on the desktop.
+
+
+2. Start up and the two panels
+-------------------------------------------------------
+1. Double-click qFlipper.exe.
+2. Two tabs sit above the title bar: FLIPPER / Android. Click to switch.
+3. The panels are fully independent: the Flipper panel behaves exactly like the
+   official build (connect, update firmware, browse files, remote control),
+   the Android panel only deals with phones.
+4. The Android panel scans USB every 1.2 s; a plugged-in phone appears in the list.
+
+
+3. Four device kinds, detected automatically
+-------------------------------------------------------
+- Normal Android (ADB): enable "USB debugging". This page only reads model / port /
+  mode and never sends adb commands, so it will not fight your local adb server.
+- Fastboot: hold Volume-Down + Power to enter bootloader.
+- Qualcomm 9008 (QDL): hold both volume keys while plugging the USB cable; Windows then
+  shows "Qualcomm HS-USB QDLoader 9008". This program reads the COM port, shown as COMx.
+- iPhone / iPad: detected by Apple VID, classified as DFU / Recovery / Normal.
+  Enhancement: the chip id (CPID) is parsed out of the DFU/Recovery serial number and shown
+  next to the device name, e.g. "iPhone / iPad · A12 (CPID 0x8020)".
+
+
+4. Switch Chinese / English
+-------------------------------------------------------
+Method 1 (temporary): a small round button at the upper-right of the Android panel
+  reads "中文 ⇄ / EN ⇄"; one click re-renders the whole page (tabs, status bar, hints, log).
+  Orange border = Chinese, green = English.
+Method 2 (remembered): open 补丁（Patch） and double-click 切换语言（Switch-Language）.bat;
+  it creates or removes english.flag next to the exe, so the next launch starts in English
+  (click it again to go back to Chinese).
+
+
+5. Fastboot flashing
+-------------------------------------------------------
+1. Select the device in the left list (mode shows Fastboot).
+2. Pick your model in the drop-down (Redmi Note 5/8, K30 Pro, Mi 10/11, Red Magic 5G, ...);
+   if it is not listed choose "other / no check". With a profile selected the program reads
+   the device "product" value and compares it; a mismatch shows a red warning and refuses
+   to flash, so you do not brick the wrong model.
+3. Type the partition (boot / recovery / system ...), click "Select image" and pick the .img.
+4. Click "Flash image"; "Erase partition" sits next to it.
+
+One-click reboot (four buttons on the reboot row):
+- Desktop / 桌面  -> normal boot into the system
+- BOOTLOADER      -> reboot back to bootloader
+- RECOVERY        -> reboot into recovery
+- 9008            -> jump straight to Qualcomm 9008 (tries "reboot edl" first,
+                     then falls back to "oem edl" automatically)
+
+Note: the 9008 jump depends on the model and bootloader. Most Snapdragon devices accept it;
+some OEM locks reject the command, and then you must use the volume-key method.
+
+
+6. Qualcomm 9008 flashing
+-------------------------------------------------------
+1. Select the device (mode shows Qualcomm 9008) and confirm a COMx port.
+2. Click "Select rawprogram" and pick rawprogram0.xml from the firmware package.
+3. Click "Select programmer" and pick prog_firehose_ddr.elf (or the matching .elf/.mbn).
+4. Click "Start 9008 flash": handshake -> transfer programmer -> write each partition
+   listed in the xml -> reboot. Image files must sit next to the xml or be reachable through
+   the relative path written in it; a missing file aborts immediately.
+
+
+7. The 补丁（Patch） folder
+-------------------------------------------------------
+- 切换语言（Switch-Language）.bat   permanent Chinese/English switch
+- 安装驱动（Install-Driver）.bat    right-click "Run as administrator" to install Google
+                                    USB Driver (ADB + Fastboot)
+- 驱动说明（Driver-Guide）.txt      how to get the Qualcomm 9008 / Apple drivers
+                                    (not bundled, redistribution not allowed)
+- 补丁说明（Readme）.txt            short bilingual readme of the patch bundle
+- drivers\google-usb\              official Google driver files (both 32-bit and 64-bit)
+
+
+8. Patch auto-download (inside the program)
+-------------------------------------------------------
+1. A "Patch" button on the right of the bottom status bar opens a small panel.
+2. Enter an http/https direct link (e.g. https://xxx/patch.zip) and click "Download".
+3. Files are saved into the system Downloads folder; existing names are never overwritten
+   (_1, _2 suffixes are appended).
+4. Download only — nothing is written to the device automatically. Sources are not
+   signature-checked, so only use links you trust.
+
+
+9. 32-bit / 64-bit
+-------------------------------------------------------
+- One installer: it reads your Windows architecture and installs only the matching build,
+  nothing extra is dropped in.
+- The installed folder looks exactly like the official package — qFlipper.exe plus runtime files,
+  no app32 / app64 subfolders.
+- The portable folder (qFlipper) is the 64-bit build; old 32-bit machines should use the
+  installed 32-bit build.
+- Features are identical; the 32-bit build has a lower memory ceiling for huge images, and it
+  ships without OpenSSL, so https downloads fail there.
+
+
+10. Risks and limitations (please read)
+-------------------------------------------------------
+- A wrong partition or wrong firmware bricks the device. Flash only boot once first to
+  validate the flow before touching other partitions.
+- Model checking compares codename strings only, never the image itself — never force-flash
+  an image built for another model.
+- 9008 supports one rawprogram.xml only; expressions like "NUM_DISK_SECTORS-33." in
+  start_sector are rejected (fail rather than write a wrong sector).
+- Sparse images, automatic A/B slot switching and flashall are not supported.
+- iOS: detection and info only, no flashing (use iTunes / Finder / idevicerestore),
+  no SHSH or signing operations.
+- The full flashing flow has not been validated on real hardware; use at your own risk.

@@ -1,0 +1,93 @@
+qFlipper · 安卓刷机版  Windows 编译说明 / Build Guide
+=======================================================
+
+说明：源码在「源码（Source）」里，保持官方目录结构没动。
+新增代码全部带 [ANDROID-FLASHER] 注释，位置：
+  backend\android\            9 组新模块（扫描 / Fastboot / 9008 / 数据模型 / worker / backend）
+  application\components\AndroidOverlay.qml   安卓面板
+  backend.pro / application.pro / cli.pro / qflipper_common.pri / qml.qrc   注册新文件
+  tools\launcher\             32/64 位启动器（纯 Win32）
+
+
+一、64 位（Qt 6.4.2 + MinGW 11.2）
+-------------------------------------------------------
+1. 装 Qt 6.4.2 mingw_64，再补模块：Qt5Compat、QtSerialPort；装 MinGW 11.2。
+2. 把源码放到纯英文路径，例如 C:\qf（中文路径会让 qmake 生成失败）。
+3. 建一个构建目录，例如 C:\qf-build，进去执行：
+
+    qmake C:\qf\qflipper.pro -spec win32-g++ CONFIG+=release
+    mingw32-make -j8
+
+4. 产物：C:\qf-build\qFlipper.exe
+5. 部署（windeployqt 对 MinGW 包会报 Unable to find the platform plugin，要手工拷）：
+   Qt6*.dll、plugins\platforms、plugins\imageformats、plugins\iconengines、plugins\styles、
+   plugins\sqldrivers、plugins\tls，qml 下的 QtQuick / QtQml / Qt / Qt5Compat 等目录，
+   再放一个 qt.conf：
+     [Paths]
+     Prefix=.
+     Plugins=plugins
+     Qml2Imports=qml
+
+
+二、32 位（Qt 5.15.2 + MinGW 8.1）
+-------------------------------------------------------
+Qt 6 没有官方 32 位桌面构建，32 位只能走 Qt 5.15：
+
+    python -m aqt install-qt windows desktop 5.15.2 win32_mingw81 -O C:\Qt5
+    python -m aqt install-tool windows desktop tools_mingw81 -O C:\Qt5
+    set PATH=C:\Qt5\5.15.2\mingw81_32\bin;C:\Qt5\Tools\mingw810_32\bin;%PATH%
+    （在 C:\qf-build32 里）qmake C:\qf\qflipper.pro -spec win32-g++ CONFIG+=release
+    mingw32-make -j8
+
+产物同样是 qFlipper.exe，部署文件换成一整套 Qt5*.dll + Qt5 的 plugins/qml。
+注意 qflipper_common.pri 已加 _WIN32_WINNT=0x0601，否则 32 位 MinGW 8.1 编不过
+（CancelIoEx / SetupDiGetDevicePropertyW 找不到声明）。
+
+
+三、安装包里的架构选择（官方 systeminfo 示例的做法）
+-------------------------------------------------------
+不做"启动器 + 双份程序"，而是让安装程序自己判断。IFW 里两个架构包默认都标记成 Virtual（隐藏），
+根组件的脚本按 systemInfo.currentCpuArchitecture 放出一个：
+
+packages\
+  com.flipperdevices.qflipper\         根组件：放使用说明和补丁，负责建快捷方式
+  com.flipperdevices.qflipper.x64\     64 位程序数据，package.xml 里写 <Virtual>true</Virtual>
+  com.flipperdevices.qflipper.x86\     32 位程序数据，同上
+
+installscript.qs（根组件）关键几行：
+
+    var arch = systemInfo.currentCpuArchitecture;   // x86_64 / i386
+    var want64 = (arch.indexOf("64") >= 0 || arch.indexOf("amd64") >= 0);
+    var c64 = installer.componentByName("com.flipperdevices.qflipper.x64");
+    var c32 = installer.componentByName("com.flipperdevices.qflipper.x86");
+    if (want64) { c64.setValue("Virtual", "false"); c64.setValue("Default", "true"); }
+    else        { c32.setValue("Virtual", "false"); c32.setValue("Default", "true"); }
+
+注意：必须写 "Virtual" / "Default" 这两个键，早期试过 setValue("checked", ...) 不生效，
+两个包会一起装进去。
+
+四、打安装包（Qt Installer Framework 4.7）
+-------------------------------------------------------
+（依赖上面三节说的目录布局，config.xml 里 TargetDir=@HomeDir@/qFlipper）
+
+打包命令：
+
+  binarycreator.exe -c config.xml -p packages --offline-only qFlipper-1.0.0-win-32-64.exe
+
+静默自测（不弹界面，装到临时目录，验证只装了一套）：
+
+  qFlipper-1.0.0-win-32-64.exe in -t C:\tmp --al --am -c
+  然后看 C:\tmp 里是 Qt6*.dll（64 位）还是 Qt5*.dll（32 位），以及 components.xml 里装的是哪个组件。
+
+自测完记得删掉桌面和开始菜单里生成的 qFlipper 快捷方式。
+
+
+五、踩过的坑（备查）
+-------------------------------------------------------
+- 3rdparty\nanopb 需要真实 0.4.x 源文件（pb.h / pb_common.c / pb_decode.c / pb_encode.c），
+  空目录会报 No rule to make target pb_common.c。
+- 改了 .pri 里的 DEFINES 后要删掉对应 .o（例如 application\*.o）强制重编，否则版本号还是旧的。
+- QML 函数名不能大写开头（会报 Method names cannot begin with an upper case letter），本项目里改叫 txt()。
+- Qt Installer Framework 的脚本没法在安装前按架构勾/取消组件（installer.componentByName 太晚），
+  所以架构选择放到运行期，用启动器解决。
+- 32 位 Qt5 没随附 OpenSSL 1.1，https 会报 TLS initialization failed。
